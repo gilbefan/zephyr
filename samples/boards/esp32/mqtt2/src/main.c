@@ -354,7 +354,7 @@ static int handleResubscribe( MQTTContext_t * pMqttContext );
 
 static uint32_t generateRandomNumber()
 {
-    return( 100 );//CHANGED: Replacing rand with 0 to build
+    return( 1000 );//CHANGED: Replacing rand with 0 to build
 }
 
 /*-----------------------------------------------------------*/
@@ -915,7 +915,7 @@ static int subscribePublishLoop( MQTTContext_t * pMqttContext )
          * of receiving publish message before subscribe ack is zero; but application
          * must be ready to receive any packet. This demo uses MQTT_ProcessLoop to
          * receive packet from network. */
-        mqttStatus = MQTT_ProcessLoop( pMqttContext, MQTT_PROCESS_LOOP_TIMEOUT_MS );
+        mqttStatus = MQTT_ProcessLoop( pMqttContext, 0 );
 
         if( mqttStatus != MQTTSuccess )
         {

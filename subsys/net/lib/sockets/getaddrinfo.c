@@ -405,7 +405,7 @@ int zsock_getaddrinfo(const char *host, const char *service,
 	int ret = DNS_EAI_FAIL;
 
 #if defined(ANY_RESOLVER)
-	*res = calloc(AI_ARR_MAX, sizeof(struct zsock_addrinfo));
+	*res = k_calloc(AI_ARR_MAX, sizeof(struct zsock_addrinfo));
 	if (!(*res)) {
 		return DNS_EAI_MEMORY;
 	}

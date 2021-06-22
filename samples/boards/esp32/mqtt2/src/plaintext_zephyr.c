@@ -33,6 +33,11 @@
 
 #include "plaintext_zephyr.h"
 
+#define ONE_SEC_TO_MS    ( 1000 )
+
+#define ONE_MS_TO_US     ( 1000 )
+
+
 /*-----------------------------------------------------------*/
 
 /* Each compilation unit must define the NetworkContext struct. */
@@ -174,6 +179,9 @@ int32_t Plaintext_Recv( NetworkContext_t * pNetworkContext,
     /* coverity[misra_c_2012_rule_10_8_violation] */
     ZSOCK_FD_SET( pPlaintextParams->socketDescriptor, &readfds );
 
+    recvTimeout.tv_sec = ( ( ( int64_t ) 500 ) / ONE_SEC_TO_MS );
+    recvTimeout.tv_usec = ( ONE_MS_TO_US * ( ( ( int64_t ) 500 ) % ONE_SEC_TO_MS ) );
+
     /* Check if there is data to read from the socket. */
     selectStatus = zsock_select( pPlaintextParams->socketDescriptor + 1,
                            &readfds,
@@ -203,7 +211,7 @@ int32_t Plaintext_Recv( NetworkContext_t * pNetworkContext,
     if( ( selectStatus > 0 ) && ( bytesReceived == 0 ) )
     {
         /* Peer has closed the connection. Treat as an error. */
-        bytesReceived = -1;
+        //bytesReceived = -1;
     }
     else if( bytesReceived < 0 )
     {
@@ -281,12 +289,16 @@ int32_t Plaintext_Send( NetworkContext_t * pNetworkContext,
     /* coverity[misra_c_2012_rule_13_4_violation] */
     /* coverity[misra_c_2012_rule_10_8_violation] */
     ZSOCK_FD_SET( pPlaintextParams->socketDescriptor, &writefds );
+
+    
+    sendTimeout.tv_sec = ( ( ( int64_t ) 500 ) / ONE_SEC_TO_MS );
+    sendTimeout.tv_usec = ( ONE_MS_TO_US * ( ( ( int64_t ) 500 ) % ONE_SEC_TO_MS ) );
     /* Check if data can be written to the socket. */
     selectStatus = zsock_select( pPlaintextParams->socketDescriptor + 1,
                            NULL,
                            &writefds,
                            NULL,
-                           &sendTimeout );
+                           NULL);
 
     if( selectStatus > 0 )
     {

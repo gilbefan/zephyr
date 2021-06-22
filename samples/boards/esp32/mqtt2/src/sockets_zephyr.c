@@ -362,7 +362,7 @@ SocketStatus_t Sockets_Connect( int32_t * pTcpSocket,
 {
     SocketStatus_t returnStatus = SOCKETS_SUCCESS;
     struct zsock_addrinfo * pListHead = NULL;
-    struct timeval transportTimeout;
+    struct zsock_timeval transportTimeout;
     int32_t setTimeoutStatus = -1;
 
     if( pServerInfo == NULL )
@@ -407,7 +407,7 @@ SocketStatus_t Sockets_Connect( int32_t * pTcpSocket,
     }
 
     /* Set the send timeout. */
-    if( returnStatus == SOCKETS_SUCCESS )
+    /*if( returnStatus == SOCKETS_SUCCESS )
     {
         transportTimeout.tv_sec = ( ( ( int64_t ) sendTimeoutMs ) / ONE_SEC_TO_MS );
         transportTimeout.tv_usec = ( ONE_MS_TO_US * ( ( ( int64_t ) sendTimeoutMs ) % ONE_SEC_TO_MS ) );
@@ -423,10 +423,10 @@ SocketStatus_t Sockets_Connect( int32_t * pTcpSocket,
             LogError( ( "Setting socket send timeout failed." ) );
             returnStatus = retrieveError( errno );
         }
-    }
+    }*/
 
     /* Set the receive timeout. */
-    if( returnStatus == SOCKETS_SUCCESS )
+    /*if( returnStatus == SOCKETS_SUCCESS )
     {
         transportTimeout.tv_sec = ( ( ( int64_t ) recvTimeoutMs ) / ONE_SEC_TO_MS );
         transportTimeout.tv_usec = ( ONE_MS_TO_US * ( ( ( int64_t ) recvTimeoutMs ) % ONE_SEC_TO_MS ) );
@@ -442,7 +442,7 @@ SocketStatus_t Sockets_Connect( int32_t * pTcpSocket,
             LogError( ( "Setting socket receive timeout failed." ) );
             returnStatus = retrieveError( errno );
         }
-    }
+    }*/
 
     return returnStatus;
 }
