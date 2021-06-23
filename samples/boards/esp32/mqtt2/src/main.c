@@ -915,7 +915,7 @@ static int subscribePublishLoop( MQTTContext_t * pMqttContext )
          * of receiving publish message before subscribe ack is zero; but application
          * must be ready to receive any packet. This demo uses MQTT_ProcessLoop to
          * receive packet from network. */
-        mqttStatus = MQTT_ProcessLoop( pMqttContext, 0 );
+        mqttStatus = MQTT_ProcessLoop( pMqttContext, MQTT_PROCESS_LOOP_TIMEOUT_MS );
 
         if( mqttStatus != MQTTSuccess )
         {
