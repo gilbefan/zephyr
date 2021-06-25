@@ -1,0 +1,4 @@
+# This makefile builds socket_echo sample for POSIX system, like Linux
+
+socket_echo: src/echo-server.c
+	$(CC) $^ -o $@

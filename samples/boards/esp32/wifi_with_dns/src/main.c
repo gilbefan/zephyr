@@ -80,7 +80,7 @@ void dns_result_cb(enum dns_resolve_status status,
 
 static void do_ipv4_lookup(struct k_work *work)
 {
-	static const char *query = "www.zephyrproject.org";
+	static const char *query = "10.18.208.250";
 	static uint16_t dns_id;
 	int ret;
 

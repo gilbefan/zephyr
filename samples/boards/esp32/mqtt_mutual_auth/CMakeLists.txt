@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.13.1)
 
 find_package(Zephyr HINTS $ENV{ZEPHYR_BASE})
-project(mqtt2)
+project(mqtt_mutual_auth)
 
 FILE(GLOB app_sources src/*.c)
 target_sources(app PRIVATE ${app_sources})
@@ -19,6 +19,7 @@ include( ${CMAKE_SOURCE_DIR}/logging-stack/logging.cmake )
 
 target_sources(app
     PRIVATE 
+        ${SOCKETS_SOURCES}
         ${MQTT_SOURCES}
         ${MQTT_SERIALIZER_SOURCES}
         ${BACKOFF_ALGORITHM_SOURCES}

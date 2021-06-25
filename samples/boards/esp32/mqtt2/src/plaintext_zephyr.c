@@ -298,7 +298,7 @@ int32_t Plaintext_Send( NetworkContext_t * pNetworkContext,
                            NULL,
                            &writefds,
                            NULL,
-                           NULL);
+                           &sendTimeout );
 
     if( selectStatus > 0 )
     {
