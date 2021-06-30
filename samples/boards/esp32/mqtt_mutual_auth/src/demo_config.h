@@ -41,7 +41,7 @@
     #define LIBRARY_LOG_NAME     "DEMO"
 #endif
 #ifndef LIBRARY_LOG_LEVEL
-    #define LIBRARY_LOG_LEVEL    LOG_INFO
+    #define LIBRARY_LOG_LEVEL    LOG_DEBUG
 #endif
 
 #include "logging_stack.h"
@@ -86,8 +86,27 @@
  * @note This path is relative from the demo binary created. Update
  * ROOT_CA_CERT_PATH to the absolute path if this demo is executed from elsewhere.
  */
-#ifndef ROOT_CA_CERT_PATH
-    #define ROOT_CA_CERT_PATH    "certificates/AmazonRootCA1.crt"
+#ifndef ROOT_CA_CERT_PEM
+    #define ROOT_CA_CERT_PEM    "-----BEGIN CERTIFICATE-----\n"\
+                                "MIIDQTCCAimgAwIBAgITBmyfz5m/jAo54vB4ikPmljZbyjANBgkqhkiG9w0BAQsF\n"\
+                                "ADA5MQswCQYDVQQGEwJVUzEPMA0GA1UEChMGQW1hem9uMRkwFwYDVQQDExBBbWF6\n"\
+                                "b24gUm9vdCBDQSAxMB4XDTE1MDUyNjAwMDAwMFoXDTM4MDExNzAwMDAwMFowOTEL\n"\
+                                "MAkGA1UEBhMCVVMxDzANBgNVBAoTBkFtYXpvbjEZMBcGA1UEAxMQQW1hem9uIFJv\n"\
+                                "b3QgQ0EgMTCCASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBALJ4gHHKeNXj\n"\
+                                "ca9HgFB0fW7Y14h29Jlo91ghYPl0hAEvrAIthtOgQ3pOsqTQNroBvo3bSMgHFzZM\n"\
+                                "9O6II8c+6zf1tRn4SWiw3te5djgdYZ6k/oI2peVKVuRF4fn9tBb6dNqcmzU5L/qw\n"\
+                                "IFAGbHrQgLKm+a/sRxmPUDgH3KKHOVj4utWp+UhnMJbulHheb4mjUcAwhmahRWa6\n"\
+                                "VOujw5H5SNz/0egwLX0tdHA114gk957EWW67c4cX8jJGKLhD+rcdqsq08p8kDi1L\n"\
+                                "93FcXmn/6pUCyziKrlA4b9v7LWIbxcceVOF34GfID5yHI9Y/QCB/IIDEgEw+OyQm\n"\
+                                "jgSubJrIqg0CAwEAAaNCMEAwDwYDVR0TAQH/BAUwAwEB/zAOBgNVHQ8BAf8EBAMC\n"\
+                                "AYYwHQYDVR0OBBYEFIQYzIU07LwMlJQuCFmcx7IQTgoIMA0GCSqGSIb3DQEBCwUA\n"\
+                                "A4IBAQCY8jdaQZChGsV2USggNiMOruYou6r4lK5IpDB/G/wkjUu0yKGX9rbxenDI\n"\
+                                "U5PMCCjjmCXPI6T53iHTfIUJrU6adTrCC2qJeHZERxhlbI1Bjjt/msv0tadQ1wUs\n"\
+                                "N+gDS63pYaACbvXy8MWy7Vu33PqUXHeeE6V/Uq2V8viTO96LXFvKWlJbYK8U90vv\n"\
+                                "o/ufQJVtMVT8QtPHRh8jrdkPSHCa2XV4cdFyQzR1bldZwgJcJmApzyMZFo6IQ6XU\n"\
+                                "5MsI+yMRQ+hDKXJioaldXgjUkK642M4UwtBV8ob2xJNDd2ZhwLnoQdeXeGADbkpy\n"\
+                                "rqXRfboQnoZsG4q5WTP468SQvvG5\n"\
+                                "-----END CERTIFICATE-----"
 #endif
 
 /**
@@ -101,7 +120,26 @@
  *
  * #define CLIENT_CERT_PATH    "...insert here..."
  */
-#define CLIENT_CERT_PATH       "credentials/871407ae2c-certificate.pem.crt.txt"
+#define CLIENT_CERT_PEM       "-----BEGIN CERTIFICATE-----\n"\
+                               "MIIDWjCCAkKgAwIBAgIVAMXPfkNrFuiSyyrAGx6/Bgo3Dwu+MA0GCSqGSIb3DQEB\n"\
+                               "CwUAME0xSzBJBgNVBAsMQkFtYXpvbiBXZWIgU2VydmljZXMgTz1BbWF6b24uY29t\n"\
+                               "IEluYy4gTD1TZWF0dGxlIFNUPVdhc2hpbmd0b24gQz1VUzAeFw0yMTA2MDQwMTE1\n"\
+                               "MDBaFw00OTEyMzEyMzU5NTlaMB4xHDAaBgNVBAMME0FXUyBJb1QgQ2VydGlmaWNh\n"\
+                               "dGUwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCZeIUzlKiSOSJGlrIH\n"\
+                               "tdv/1JZD4wvCW82ZCYFAsIDkZ4JC3qVJeYD/IbhwFETuXXGt8CHGvl8BaEoNFNJr\n"\
+                               "9qnub8qnC1fR13/FrLoi+q6IB7XqQSDKbc7ZVdnlcth/+SErNxublAly7AtbhCQ3\n"\
+                               "sK0aFF1qactyIuGKJACAYuSwDs37p6xNCoLWN//jLFcXGcsjYsOxj1Q88NI8Kb6i\n"\
+                               "0DW8fiBbLqTpJUcPugdIHV4dfmscqLuDHpJ22jPhL086ZBsaLr25JAbRQbQv/1cy\n"\
+                               "PfImOXBSLt0wSmJQFAiL2xrlKtEapxpI92VsItx48R/oOZP0JywZuWMklBkYU29z\n"\
+                               "SiuDAgMBAAGjYDBeMB8GA1UdIwQYMBaAFFNchlPQ4bkQZ/4mS4R9evXlJmw8MB0G\n"\
+                               "A1UdDgQWBBTMm8A5ySSHcd6WrfSRlSHU63coGDAMBgNVHRMBAf8EAjAAMA4GA1Ud\n"\
+                               "DwEB/wQEAwIHgDANBgkqhkiG9w0BAQsFAAOCAQEARq0n382wRrxpc2xW0Zn9Nv6a\n"\
+                               "XWuFlmrAC507qIH3v2R6f1o+v4PbaTpqRsUj8n1qZmfuVi13Gp8cddsCJiKsVlqA\n"\
+                               "3P05mzRe0nzbK28sRXKDK6jloiwCBCxac/EmjRVDfeIbMG1Ze/nhsyuoqEpmNpob\n"\
+                               "+FHLkuz0D2vVfCRg2bdiqTxIyclHPyRnzArvts/UwRFtuW33Qwsf3K/lGPYLlQ86\n"\
+                               "iKes0VmHuFPFGQ8KnJw2MehqnExCAhzrNJi63XkkUjzejvk/KVyzKeVG4jdP3P9L\n"\
+                               "M8K9J3NXBZo8US2ZPEM/2Jj2Gv7CxO/cUKQ5F2F5W88q8z9swTloYBY45l/oQw==\n"\
+                               "-----END CERTIFICATE-----"
 
 /**
  * @brief Path of the file containing the client's private key.
@@ -114,7 +152,33 @@
  *
  * #define CLIENT_PRIVATE_KEY_PATH    "...insert here..."
  */
-#define CLIENT_PRIVATE_KEY_PATH       "credentials/871407ae2c-private.pem.key"
+#define CLIENT_PRIVATE_KEY_PEM       "-----BEGIN RSA PRIVATE KEY-----\n"\
+                                     "MIIEogIBAAKCAQEAmXiFM5SokjkiRpayB7Xb/9SWQ+MLwlvNmQmBQLCA5GeCQt6l\n"\
+                                     "SXmA/yG4cBRE7l1xrfAhxr5fAWhKDRTSa/ap7m/KpwtX0dd/xay6IvquiAe16kEg\n"\
+                                     "ym3O2VXZ5XLYf/khKzcbm5QJcuwLW4QkN7CtGhRdamnLciLhiiQAgGLksA7N+6es\n"\
+                                     "TQqC1jf/4yxXFxnLI2LDsY9UPPDSPCm+otA1vH4gWy6k6SVHD7oHSB1eHX5rHKi7\n"\
+                                     "gx6Sdtoz4S9POmQbGi69uSQG0UG0L/9XMj3yJjlwUi7dMEpiUBQIi9sa5SrRGqca\n"\
+                                     "SPdlbCLcePEf6DmT9CcsGbljJJQZGFNvc0orgwIDAQABAoIBAAY/bczHxIUPZmHR\n"\
+                                     "SLYfpTEpCmUBHT1wV1JfnK9xgA3MWPU38yqmk6XPTZ7idFvv2ezm1bktjtiT0k/u\n"\
+                                     "BRL4G7rlOi7Ku2yDhWQawAkkg25uQe2jcR5Mkhsu74vzvPSYw8zqlWkkAa54BY5Y\n"\
+                                     "NtE9lA53vcXTQMEIwn3JMWwImp7AK2Xk4EIUDE30jM4bnmDAdDr9jo9Zp4cmHJEw\n"\
+                                     "bfGhNNK9JIEDRpma/pftviiKj96FXNKN3tBXMEPrW7hWyAZnm6HDYbl9gKdMm257\n"\
+                                     "0QqEX6BebdnFR1T+i4vp2ZO121RBBPORxylwgSQUFDvdvKgLl/2oIg096LaRbE70\n"\
+                                     "hlJJoCECgYEAyvW7OpURgoO9EASocTLalS/zWvoJO5+6iDalwnnRRmChG1We1yo8\n"\
+                                     "Fd4l9GLgpkM67W8HcDO0Xh19PnUSsOr2598H4s0z/lxHLl9jK+RVxFKeQ0mN39o0\n"\
+                                     "+g1TXjSXcxWLzp+KxlMbtoJEwApYCwEq7e+5cqZtw+xV7v/2shEABIUCgYEAwZPo\n"\
+                                     "BAzDzp5kaUgFlBrcGBEzYt9rVlSD2Hs/wBank0AKYbJL6CTZ0hzSDOtPGgDo+af/\n"\
+                                     "lGfJVKyvgxOYjbFVNWcAI8LxvxKaTwR/C5uvK3PXOIdefCidOTNEKyaTMinIWGW9\n"\
+                                     "Q+pgO7cWgDo2Ak8Lkxc5K7F54AmY2dfNdPVLEmcCgYBCIKhdIP6wgI3UL0BWiZQw\n"\
+                                     "cYwfw0HI3HUhNnTxlVE7VfaH+nCjeE5Vbaj+JE0/vr3vaHKK+z20QHVzKR/q5tOF\n"\
+                                     "nuRp4CQlpxlGIawlO+M58RVBpTCFlAoYwsi78/S4eXew3ciQb7mi0HToATbIdxvu\n"\
+                                     "pGHO2iz/Xfxtv5Y4VFOmJQKBgA5sScY7eT9k19BsWFYPpkR4y55bTTESfPxdOoPC\n"\
+                                     "bFvxUpSy5yr1y/D2ysPBqJQkazdmyAkzrnGLqEwY4q3z/4hKE12WwdJdvXeTuy+P\n"\
+                                     "Ov7+05NXqrePgx9m7XZVmnQLXu0PL4nm5aKtYpTNQYbsgs1D1rOltpH1xRi+FoXX\n"\
+                                     "XO+TAoGAatEDD7v/2Beb7mcMOBsU4VInDo3G1kc1lBW5QWA+EAG8hdROekQB8NG0\n"\
+                                     "7a38CxujoYlD1b5nb2882pR0cIo+PfWtK+1s2h12cZ6aqXNRSJE279pUKzXK27Vt\n"\
+                                     "buw6jdxr+d7U4uYBq949VhXB/MhfTFW7H+A3l3UuUNEq7bIDcF0=\n"\
+                                     "-----END RSA PRIVATE KEY-----"
 
 /**
  * @brief The username value for authenticating client to MQTT broker when

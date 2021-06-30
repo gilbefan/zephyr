@@ -19,7 +19,7 @@ include( ${CMAKE_SOURCE_DIR}/logging-stack/logging.cmake )
 
 target_sources(app
     PRIVATE 
-        ${SOCKETS_SOURCES}
+        #${SOCKETS_SOURCES}
         ${MQTT_SOURCES}
         ${MQTT_SERIALIZER_SOURCES}
         ${BACKOFF_ALGORITHM_SOURCES}

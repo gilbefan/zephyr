@@ -214,7 +214,6 @@ static SocketStatus_t connectToAddress( struct sockaddr * pAddrInfo,
 
     /* Convert port from host byte order to network byte order. */
     netPort = htons( port );
-
     if( pAddrInfo->sa_family == ( sa_family_t ) AF_INET )
     {
         /* MISRA Rule 11.3 flags the following line for casting a pointer of
@@ -297,7 +296,6 @@ static SocketStatus_t attemptConnection( struct zsock_addrinfo * pListHead,
         *pTcpSocket = zsock_socket( pIndex->ai_family,
                               pIndex->ai_socktype,
                               pIndex->ai_protocol );
-
         if( *pTcpSocket == -1 )
         {
             continue;
