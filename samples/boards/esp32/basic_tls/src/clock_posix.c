@@ -29,7 +29,7 @@
 #ifdef POSIX_TIME_HEADER
     #include POSIX_TIME_HEADER
 #else
-    #include <time.h>
+    #include <posix/time.h>
 #endif
 
 /* Platform clock include. */

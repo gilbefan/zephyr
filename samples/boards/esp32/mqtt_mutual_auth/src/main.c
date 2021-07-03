@@ -64,6 +64,8 @@
 /* Zephyr random */
 #include <random/rand32.h>
 
+#include <net/socket.h> //for debugging dns resolve/getaddrinfo
+
 /* Include Demo Config as the first non-system header. */
 #include "demo_config.h"
 
@@ -365,6 +367,8 @@ struct NetworkContext
     TlsTransportParams_t * pParams;
 };
 
+bool fakemutex = true;
+
 /*-----------------------------------------------------------*/
 
 /**
@@ -565,7 +569,7 @@ static int handleResubscribe( MQTTContext_t * pMqttContext );
 
 static uint32_t generateRandomNumber()
 {
-    return( sys_rand32_get() );
+    return( 1000 );
 }
 
 /*-----------------------------------------------------------*/
@@ -650,15 +654,16 @@ static int connectToServerWithBackoffRetries( NetworkContext_t * pNetworkContext
                    AWS_IOT_ENDPOINT_LENGTH,
                    AWS_IOT_ENDPOINT,
                    AWS_MQTT_PORT ) );
-        tlsTransportStatus = Sockets_Connect( &(pNetworkContext->pParams->tcpSocket),
+        /*tlsTransportStatus = Sockets_Connect( &(pNetworkContext->pParams->tcpSocket),
                                         &serverInfo,
                                         TRANSPORT_SEND_RECV_TIMEOUT_MS,
-                                        TRANSPORT_SEND_RECV_TIMEOUT_MS );
+                                        TRANSPORT_SEND_RECV_TIMEOUT_MS );*/
         tlsTransportStatus = MBedTLS_Connect( pNetworkContext,
                                          &serverInfo,
                                          &networkCredentials,
                                          TRANSPORT_SEND_RECV_TIMEOUT_MS,
                                          TRANSPORT_SEND_RECV_TIMEOUT_MS );
+        printk("successful connect\n");
 
         if( tlsTransportStatus == TLS_TRANSPORT_SUCCESS )
         {
@@ -666,6 +671,7 @@ static int connectToServerWithBackoffRetries( NetworkContext_t * pNetworkContext
              * in this MQTT client. */
             createCleanSession = ( *pClientSessionPresent == true ) ? false : true;
 
+            printk("establishing mqtt session\n");
             /* Sends an MQTT Connect packet using the established TLS session,
              * then waits for connection acknowledgment (CONNACK) packet. */
             returnStatus = establishMqttSession( pMqttContext, createCleanSession, pBrokerSessionPresent );
@@ -676,6 +682,8 @@ static int connectToServerWithBackoffRetries( NetworkContext_t * pNetworkContext
                 ( void ) MBedTLS_Disconnect( pNetworkContext );
             }
         }
+
+        printk("mqtt session established?\n");
 
         if( returnStatus == EXIT_FAILURE )
         {
@@ -693,6 +701,7 @@ static int connectToServerWithBackoffRetries( NetworkContext_t * pNetworkContext
                            "after %hu ms backoff.",
                            ( unsigned short ) nextRetryBackOff ) );
                 Clock_SleepMs( nextRetryBackOff );
+                printk("clock sleeping\n");
             }
         }
     } while( ( returnStatus == EXIT_FAILURE ) && ( backoffAlgStatus == BackoffAlgorithmSuccess ) );
@@ -1127,8 +1136,10 @@ static int establishMqttSession( MQTTContext_t * pMqttContext,
         connectInfo.passwordLength = 0U;
     #endif /* ifdef CLIENT_USERNAME */
 
+    printk("before sending packet to broker \n");
     /* Send MQTT CONNECT packet to broker. */
     mqttStatus = MQTT_Connect( pMqttContext, &connectInfo, NULL, CONNACK_RECV_TIMEOUT_MS, pSessionPresent );
+    printk("packet sent\n");
 
     if( mqttStatus != MQTTSuccess )
     {
@@ -1594,6 +1605,180 @@ int mutual_auth_start()
     return returnStatus;
 }
 
+int justAWrapper() {
+    /*struct zsock_addrinfo * pListHead = NULL;
+    int32_t dnsStatus = -1;
+    struct zsock_addrinfo hints;
+    ( void ) memset( &hints, 0, sizeof( hints ) );
+    hints.ai_family = AF_INET; //Changed to AF_INET from AF_UNSPEC
+    hints.ai_socktype = ( int32_t ) SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+    printk("FIRST getaddrinfo called\n");
+    dnsStatus = zsock_getaddrinfo( AWS_IOT_ENDPOINT, NULL, &hints, &pListHead );
+    printk("Test getaddrinfo returns: %d", dnsStatus);*/
+
+    int returnStatus = EXIT_SUCCESS;
+    MQTTContext_t mqttContext = { 0 };
+    NetworkContext_t networkContext = { 0 };
+    TlsTransportParams_t tlsTransportParams = { 0 };
+    bool clientSessionPresent = false, brokerSessionPresent = false;
+    struct timespec tp;
+
+    /* Set the pParams member of the network context with desired transport. */
+    networkContext.pParams = &tlsTransportParams;
+
+    /* Seed pseudo random number generator (provided by ISO C standard library) for
+     * use by retry utils library when retrying failed network operations. */
+
+    /* Get current time to seed pseudo random number generator. */
+    ( void ) clock_gettime( CLOCK_REALTIME, &tp );
+    /* Seed pseudo random number generator with nanoseconds. */
+    //srand( tp.tv_nsec );
+    printk("passing top test and going to initializeMqtt source code\n");
+    /* Initialize MQTT library. Initialization of the MQTT library needs to be
+     * done only once in this demo. */
+    MQTTStatus_t mqttStatus;
+    MQTTFixedBuffer_t networkBuffer;
+    TransportInterface_t transport;
+    MQTTContext_t * pMqttContext = &mqttContext;
+    NetworkContext_t * pNetworkContext = &networkContext;
+
+    assert( pMqttContext != NULL );
+    assert( pNetworkContext != NULL );
+
+    /* Fill in TransportInterface send and receive function pointers.
+     * For this demo, TCP sockets are used to send and receive data
+     * from network. Network context is SSL context for OpenSSL.*/
+    transport.pNetworkContext = pNetworkContext;
+    transport.send = MBedTLS_send;
+    transport.recv = MBedTLS_recv;
+
+    networkBuffer.pBuffer = buffer;
+    networkBuffer.size = NETWORK_BUFFER_SIZE;
+
+    /*mqttStatus = MQTT_Init( pMqttContext,
+                            &transport,
+                            Clock_GetTimeMs,
+                            eventCallback,
+                            &networkBuffer );
+
+    if( mqttStatus != MQTTSuccess )
+    {
+        returnStatus = EXIT_FAILURE;
+        LogError( ( "MQTT init failed: Status = %s.", MQTT_Status_strerror( mqttStatus ) ) );
+    }*/
+
+    // BackoffRetries code starts here
+
+    returnStatus = EXIT_FAILURE;
+    BackoffAlgorithmStatus_t backoffAlgStatus = BackoffAlgorithmSuccess;
+    TlsTransportStatus_t tlsTransportStatus = TLS_TRANSPORT_SUCCESS;
+    BackoffAlgorithmContext_t reconnectParams;
+    ServerInfo_t serverInfo;
+    NetworkCredentials_t networkCredentials;
+    uint16_t nextRetryBackOff;
+    bool createCleanSession;
+
+    serverInfo.pHostName = AWS_IOT_ENDPOINT;
+    serverInfo.hostNameLength = AWS_IOT_ENDPOINT_LENGTH;
+    serverInfo.port = AWS_MQTT_PORT;
+
+    memset( &networkCredentials, 0, sizeof( NetworkCredentials_t ) );
+    networkCredentials.pRootCa = ROOT_CA_CERT_PEM;
+    networkCredentials.rootCaSize = sizeof(ROOT_CA_CERT_PEM);
+
+    #ifndef CLIENT_USERNAME
+        networkCredentials.pClientCert = CLIENT_CERT_PEM;
+        networkCredentials.clientCertSize = sizeof(CLIENT_CERT_PEM);
+        networkCredentials.pPrivateKey = CLIENT_PRIVATE_KEY_PEM;
+        networkCredentials.privateKeySize = sizeof(CLIENT_PRIVATE_KEY_PEM);
+    #endif
+
+    networkCredentials.disableSni = 0; //0 for false
+
+    if( AWS_MQTT_PORT == 443 )
+    {
+        #ifdef CLIENT_USERNAME
+            networkCredentials.pAlpnProtos = AWS_IOT_PASSWORD_ALPN;
+            //opensslCredentials.alpnProtosLen = AWS_IOT_PASSWORD_ALPN_LENGTH;
+        #else
+            *networkCredentials.pAlpnProtos = AWS_IOT_MQTT_ALPN;
+            //opensslCredentials.alpnProtosLen = AWS_IOT_MQTT_ALPN_LENGTH;
+        #endif
+    }
+
+    /*BackoffAlgorithm_InitializeParams( &reconnectParams,
+                                       CONNECTION_RETRY_BACKOFF_BASE_MS,
+                                       CONNECTION_RETRY_MAX_BACKOFF_DELAY_MS,
+                                       CONNECTION_RETRY_MAX_ATTEMPTS );*/
+
+    do
+    {
+        LogInfo( ( "Establishing a TLS session to %.*s:%d.",
+                   AWS_IOT_ENDPOINT_LENGTH,
+                   AWS_IOT_ENDPOINT,
+                   AWS_MQTT_PORT ) );
+        //tlsTransportStatus = Sockets_Connect( &(pNetworkContext->pParams->tcpSocket),
+                                        //&serverInfo,
+                                        //TRANSPORT_SEND_RECV_TIMEOUT_MS,
+                                        //TRANSPORT_SEND_RECV_TIMEOUT_MS );
+        tlsTransportStatus = MBedTLS_Connect( pNetworkContext,
+                                         &serverInfo,
+                                         &networkCredentials,
+                                         TRANSPORT_SEND_RECV_TIMEOUT_MS,
+                                         TRANSPORT_SEND_RECV_TIMEOUT_MS );
+        printk("successful connect\n");
+
+        if( tlsTransportStatus == TLS_TRANSPORT_SUCCESS )
+        {
+            createCleanSession = ( clientSessionPresent == true ) ? false : true;
+
+            printk("establishing mqtt session\n");
+            mqttStatus = MQTT_Init( pMqttContext,
+                            &transport,
+                            Clock_GetTimeMs,
+                            eventCallback,
+                            &networkBuffer );
+
+            if( mqttStatus != MQTTSuccess )
+            {
+                returnStatus = EXIT_FAILURE;
+                LogError( ( "MQTT init failed: Status = %s.", MQTT_Status_strerror( mqttStatus ) ) );
+            }
+            returnStatus = establishMqttSession( pMqttContext, createCleanSession, &brokerSessionPresent );
+
+            if( returnStatus == EXIT_FAILURE )
+            {
+                ( void ) MBedTLS_Disconnect( pNetworkContext );
+            }
+        }
+
+        printk("past establish Mqtt session. return status is: %d\n");
+
+        if( returnStatus == EXIT_FAILURE )
+        {
+            backoffAlgStatus = BackoffAlgorithm_GetNextBackoff( &reconnectParams, generateRandomNumber(), &nextRetryBackOff );
+
+            if( backoffAlgStatus == BackoffAlgorithmRetriesExhausted )
+            {
+                LogError( ( "Connection to the broker failed, all attempts exhausted." ) );
+                returnStatus = EXIT_FAILURE;
+            }
+            else if( backoffAlgStatus == BackoffAlgorithmSuccess )
+            {
+                LogWarn( ( "Connection to the broker failed. Retrying connection "
+                           "after %hu ms backoff.",
+                           ( unsigned short ) nextRetryBackOff ) );
+                Clock_SleepMs( nextRetryBackOff );
+                printk("clock sleeping\n");
+            }
+        }
+    } while( ( returnStatus == EXIT_FAILURE ) && ( backoffAlgStatus == BackoffAlgorithmSuccess ) );
+
+    printk("all debugging done");
+    return 0;
+}
+
 /*-----------------------------------------------------------*/
 
 static void handler_cb(struct net_mgmt_event_callback *cb,
@@ -1615,13 +1800,14 @@ static void handler_cb(struct net_mgmt_event_callback *cb,
 		log_strdup(net_addr_ntop(AF_INET,
 					&iface->config.ip.ipv4->netmask,
 					buf, sizeof(buf))));
-	printf("Router: %s",
+	printf("Router: %s\n",
 		log_strdup(net_addr_ntop(AF_INET,
 						&iface->config.ip.ipv4->gw,
 						buf, sizeof(buf))));
     
-    k_work_init_delayable(&tcp_timer, mutual_auth_start);
-	k_work_reschedule(&tcp_timer, K_NO_WAIT);
+    fakemutex = false;
+    //k_work_init_delayable(&tcp_timer, mutual_auth_start);
+	//k_work_reschedule(&tcp_timer, K_NO_WAIT);
 }
 
 void main()
@@ -1658,4 +1844,11 @@ void main()
 			LOG_ERR("connection failed");
 		}
 	}
+
+    while(fakemutex) {
+        sleep(1);
+    }
+
+    justAWrapper();
+    //mutual_auth_start();
 }   

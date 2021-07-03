@@ -20,8 +20,8 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef SOCKETS_POSIX_H_
-#define SOCKETS_POSIX_H_
+#ifndef SOCKETS_ZEPHYR_H_
+#define SOCKETS_ZEPHYR_H_
 
 /**************************************************/
 /******* DO NOT CHANGE the following order ********/

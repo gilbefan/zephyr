@@ -97,8 +97,9 @@ typedef struct SSLContext
  */
 typedef struct TlsTransportParams
 {
+    SSLContext_t * sslContext;
     int32_t tcpSocket;
-    SSLContext_t sslContext;
+    //int32_t * randomTest;
 } TlsTransportParams_t;
 
 /**

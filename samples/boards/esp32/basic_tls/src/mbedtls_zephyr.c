@@ -239,7 +239,7 @@ int mbedtls_platform_send( void * ctx,
                   size_t len)
 {
     int socket = (int) ctx;
-    printk("mbedtls_send called.\n Socket is: %d\n Buffer Length: %d", socket, len);
+    //printk("mbedtls_send called.\n Socket is: %d\n Buffer Length: %d\n", socket, len);
     ssize_t sendStatus = zsock_send(socket, buf, len, 0);
 
     return sendStatus;
@@ -250,9 +250,28 @@ int mbedtls_platform_recv( void * ctx,
                   size_t len )
 {
     int socket = (int) ctx;
-    printk("mbedtls_recv called.\n Socket is: %d.\n Buffer Length: %d", socket, len);
-    ssize_t recvStatus = zsock_recv(socket, buf, len, 0);
-    printk("mbedtls_recv finished\n");
+
+    int32_t selectStatus = -1;
+    struct timeval recvTimeout;
+    recvTimeout.tv_sec = ( ( ( int64_t ) 500 ) / 1000 );
+    recvTimeout.tv_usec = ( 1000 * ( ( ( int64_t ) 500 ) % 1000 ) );
+    fd_set readfds;
+    ZSOCK_FD_ZERO( &readfds );
+    ZSOCK_FD_SET( socket, &readfds );
+
+    selectStatus = zsock_select( socket + 1,
+                           &readfds,
+                           NULL,
+                           NULL,
+                           &recvTimeout );
+
+    ssize_t recvStatus = 0;
+    if(selectStatus > 0) {
+        //printk("mbedtls_recv called.\n Socket is: %d.\n Buffer Length: %d\n", socket, len);
+        recvStatus = zsock_recv(socket, buf, len, 0);
+        //printk("mbedtls_recv finished\n");
+    }
+
     return recvStatus;
 }
 /*-----------------------------------------------------------*/
@@ -540,9 +559,9 @@ static TlsTransportStatus_t tlsSetup( NetworkContext_t * pNetworkContext,
 
     pTlsTransportParams = pNetworkContext->pParams;
     /* Initialize the mbed TLS context structures. */
-    sslContextInit( &( pTlsTransportParams->sslContext ) );
+    sslContextInit( pTlsTransportParams->sslContext );
 
-    mbedtlsError = mbedtls_ssl_config_defaults( &( pTlsTransportParams->sslContext.config ),
+    mbedtlsError = mbedtls_ssl_config_defaults( &( pTlsTransportParams->sslContext->config ),
                                                 MBEDTLS_SSL_IS_CLIENT,
                                                 MBEDTLS_SSL_TRANSPORT_STREAM,
                                                 MBEDTLS_SSL_PRESET_DEFAULT );
@@ -559,7 +578,7 @@ static TlsTransportStatus_t tlsSetup( NetworkContext_t * pNetworkContext,
 
     if( returnStatus == TLS_TRANSPORT_SUCCESS )
     {
-        mbedtlsError = setCredentials( &( pTlsTransportParams->sslContext ),
+        mbedtlsError = setCredentials( pTlsTransportParams->sslContext,
                                        pNetworkCredentials );
 
         if( mbedtlsError != 0 )
@@ -568,8 +587,8 @@ static TlsTransportStatus_t tlsSetup( NetworkContext_t * pNetworkContext,
         }
         else
         {
-            /* Optionally set SNI and ALPN protocols. */
-            setOptionalConfigurations( &( pTlsTransportParams->sslContext ),
+            // Optionally set SNI and ALPN protocols.
+            setOptionalConfigurations( pTlsTransportParams->sslContext,
                                        pHostName,
                                        pNetworkCredentials );
         }
@@ -592,8 +611,8 @@ static TlsTransportStatus_t tlsHandshake( NetworkContext_t * pNetworkContext,
 
     pTlsTransportParams = pNetworkContext->pParams;
     /* Initialize the mbed TLS secured connection context. */
-    mbedtlsError = mbedtls_ssl_setup( &( pTlsTransportParams->sslContext.context ),
-                                      &( pTlsTransportParams->sslContext.config ) );
+    mbedtlsError = mbedtls_ssl_setup( &( pTlsTransportParams->sslContext->context ),
+                                      &( pTlsTransportParams->sslContext->config ) );
 
     if( mbedtlsError != 0 )
     {
@@ -612,7 +631,7 @@ static TlsTransportStatus_t tlsHandshake( NetworkContext_t * pNetworkContext,
          * #mbedtls_ssl_set_bio requires the second parameter as void *.
          */
         /* coverity[misra_c_2012_rule_11_2_violation] */
-        mbedtls_ssl_set_bio( &( pTlsTransportParams->sslContext.context ),
+        mbedtls_ssl_set_bio( &( pTlsTransportParams->sslContext->context ),
                              ( void * ) pTlsTransportParams->tcpSocket,
                              mbedtls_platform_send,
                              mbedtls_platform_recv,
@@ -621,14 +640,14 @@ static TlsTransportStatus_t tlsHandshake( NetworkContext_t * pNetworkContext,
 
     if( returnStatus == TLS_TRANSPORT_SUCCESS )
     {
-        /* Perform the TLS handshake. */
+        // Perform the TLS handshake.
         do
         {
             printk("before handshake\n");
-            mbedtls_ssl_conf_dbg( &(pTlsTransportParams->sslContext.config), prvTlsDebugPrint, NULL );
-            mbedtls_debug_set_threshold( 4 );
+            //mbedtls_ssl_conf_dbg( &(pTlsTransportParams->sslContext->config), prvTlsDebugPrint, NULL );
+            //mbedtls_debug_set_threshold( 4 );
             //printk("pTlsTransportParam sslContext struct/pointer is: %p", pTlsTransportParams->sslContext);
-            mbedtlsError = mbedtls_ssl_handshake( &( pTlsTransportParams->sslContext.context ) );
+            mbedtlsError = mbedtls_ssl_handshake( &( pTlsTransportParams->sslContext->context ) );
         } while( ( mbedtlsError == MBEDTLS_ERR_SSL_WANT_READ ) ||
                  ( mbedtlsError == MBEDTLS_ERR_SSL_WANT_WRITE ) );
 
@@ -751,7 +770,7 @@ TlsTransportStatus_t MBedTLS_Connect( NetworkContext_t * pNetworkContext,
     {
         pTlsTransportParams = pNetworkContext->pParams;
         printk("going into sockets_connect\n");
-        socketStatus = Sockets_Connect( &( pTlsTransportParams->tcpSocket ),
+        socketStatus = Sockets_Connect( &(pTlsTransportParams->tcpSocket),
                                         pServerInfo,
                                         receiveTimeoutMs,
                                         sendTimeoutMs );
@@ -769,36 +788,36 @@ TlsTransportStatus_t MBedTLS_Connect( NetworkContext_t * pNetworkContext,
     /* Initialize mbedtls. */
     if( returnStatus == TLS_TRANSPORT_SUCCESS )
     {
-        returnStatus = initMbedtls( &( pTlsTransportParams->sslContext.entropyContext ),
-                                    &( pTlsTransportParams->sslContext.ctrDrgbContext ) );
+        returnStatus = initMbedtls( &( pTlsTransportParams->sslContext->entropyContext ),
+                                    &( pTlsTransportParams->sslContext->ctrDrgbContext ) );
     }
 
     printk("before tlsSetup\n");
-    /* Initialize TLS contexts and set credentials. */
+    // Initialize TLS contexts and set credentials.
     if( returnStatus == TLS_TRANSPORT_SUCCESS )
     {
         returnStatus = tlsSetup( pNetworkContext, pHostName, pNetworkCredentials );
     }
     printk("tlsSetup Finished");
 
-    /* Perform TLS handshake. */
+    // Perform TLS handshake.
     if( returnStatus == TLS_TRANSPORT_SUCCESS )
     {
         returnStatus = tlsHandshake( pNetworkContext, pNetworkCredentials );
     }
     printk("tls Handkshook");
 
-    /* Clean up on failure. */
+    // Clean up on failure.
     if( returnStatus != TLS_TRANSPORT_SUCCESS )
     {
         if( ( pNetworkContext != NULL ) && ( pNetworkContext->pParams != NULL ) )
         {
-            sslContextFree( &( pTlsTransportParams->sslContext ) );
+            sslContextFree( pTlsTransportParams->sslContext );
 
-            /*if( pTlsTransportParams->tcpSocket != FREERTOS_INVALID_SOCKET )
-            {
-                ( void ) zsock_close( pTlsTransportParams->tcpSocket );
-            }*/
+            //if( pTlsTransportParams->tcpSocket != FREERTOS_INVALID_SOCKET )
+            //{
+            //    ( void ) zsock_close( pTlsTransportParams->tcpSocket );
+            //}
         }
     }
     else
@@ -821,7 +840,7 @@ void MBedTLS_Disconnect( NetworkContext_t * pNetworkContext )
     {
         pTlsTransportParams = pNetworkContext->pParams;
         /* Attempting to terminate TLS connection. */
-        tlsStatus = ( SocketStatus_t ) mbedtls_ssl_close_notify( &( pTlsTransportParams->sslContext.context ) );
+        tlsStatus = ( SocketStatus_t ) mbedtls_ssl_close_notify( &( pTlsTransportParams->sslContext->context ) );
 
         /* Ignore the WANT_READ and WANT_WRITE return values. */
         if( ( tlsStatus != ( SocketStatus_t ) MBEDTLS_ERR_SSL_WANT_READ ) &&
@@ -853,7 +872,7 @@ void MBedTLS_Disconnect( NetworkContext_t * pNetworkContext )
         Sockets_Disconnect( pTlsTransportParams->tcpSocket );
 
         /* Free mbed TLS contexts. */
-        sslContextFree( &( pTlsTransportParams->sslContext ) );
+        sslContextFree( pTlsTransportParams->sslContext );
     }
 
     /* Clear the mutex functions for mbed TLS thread safety. */
@@ -871,7 +890,7 @@ int32_t MBedTLS_recv( NetworkContext_t * pNetworkContext,
     assert( ( pNetworkContext != NULL ) && ( pNetworkContext->pParams != NULL ) );
 
     pTlsTransportParams = pNetworkContext->pParams;
-    tlsStatus = ( int32_t ) mbedtls_ssl_read( &( pTlsTransportParams->sslContext.context ),
+    tlsStatus = ( int32_t ) mbedtls_ssl_read( &( pTlsTransportParams->sslContext->context ),
                                               pBuffer,
                                               bytesToRecv );
 
@@ -913,7 +932,7 @@ int32_t MBedTLS_send( NetworkContext_t * pNetworkContext,
     assert( ( pNetworkContext != NULL ) && ( pNetworkContext->pParams != NULL ) );
 
     pTlsTransportParams = pNetworkContext->pParams;
-    tlsStatus = ( int32_t ) mbedtls_ssl_write( &( pTlsTransportParams->sslContext.context ),
+    tlsStatus = ( int32_t ) mbedtls_ssl_write( &( pTlsTransportParams->sslContext->context ),
                                                pBuffer,
                                                bytesToSend );
 

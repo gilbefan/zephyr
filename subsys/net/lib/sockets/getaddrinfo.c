@@ -157,6 +157,7 @@ int z_impl_z_zsock_getaddrinfo_internal(const char *host, const char *service,
 				       const struct zsock_addrinfo *hints,
 				       struct zsock_addrinfo *res)
 {
+	printk("internal call begun\n");
 	int family = AF_UNSPEC;
 	int ai_flags = 0;
 	long int port = 0;
@@ -193,16 +194,19 @@ int z_impl_z_zsock_getaddrinfo_internal(const char *host, const char *service,
 
 		return getaddrinfo_null_host(port, hints, res);
 	}
+	printk("midpoint of internal call\n");
 
 	ai_state.hints = hints;
 	ai_state.idx = 0U;
 	ai_state.port = htons(port);
 	ai_state.ai_arr = res;
 	k_sem_init(&ai_state.sem, 0, K_SEM_MAX_LIMIT);
+	printk("semaphore init done\n");
 
 	/* If the family is AF_UNSPEC, then we query IPv4 address first */
 	ret = exec_query(host, family, &ai_state);
 	if (ret == 0) {
+		printk("starting dns query\n");
 		/* If the DNS query for reason fails so that the
 		 * dns_resolve_cb() would not be called, then we want the
 		 * semaphore to timeout so that we will not hang forever.
@@ -212,12 +216,14 @@ int z_impl_z_zsock_getaddrinfo_internal(const char *host, const char *service,
 		int ret = k_sem_take(&ai_state.sem,
 				     K_MSEC(CONFIG_NET_SOCKETS_DNS_TIMEOUT +
 					    100));
+		printk("semaphore taken\n");
 		if (ret == -EAGAIN) {
 			return DNS_EAI_AGAIN;
 		}
 
 		st1 = ai_state.status;
 	} else {
+		printk("else statement\n");
 		/* If we are returned -EPFNOSUPPORT then that will indicate
 		 * wrong address family type queried. Check that and return
 		 * DNS_EAI_ADDRFAMILY and set errno to EINVAL.
@@ -230,6 +236,7 @@ int z_impl_z_zsock_getaddrinfo_internal(const char *host, const char *service,
 			st1 = DNS_EAI_SYSTEM;
 		}
 	}
+	printk("internal ipv4 done\n");
 
 	/* If family is AF_UNSPEC, the IPv4 query has been already done
 	 * so we can do IPv6 query next if IPv6 is enabled in the config.
@@ -398,6 +405,7 @@ int zsock_getaddrinfo(const char *host, const char *service,
 		      const struct zsock_addrinfo *hints,
 		      struct zsock_addrinfo **res)
 {
+	printk("addrinfo called\n");
 	if (IS_ENABLED(CONFIG_NET_SOCKETS_OFFLOAD)) {
 		return socket_offload_getaddrinfo(host, service, hints, res);
 	}
@@ -410,19 +418,20 @@ int zsock_getaddrinfo(const char *host, const char *service,
 		return DNS_EAI_MEMORY;
 	}
 #endif
-
+	printk("memory allocated\n");
 #if defined(CONFIG_NET_IPV6) || defined(CONFIG_NET_IPV4)
 	/* Resolve literal address even if DNS is not available */
 	if (ret) {
 		ret = try_resolve_literal_addr(host, service, hints, *res);
 	}
 #endif
-
+	printk("try resolve literal addr finished\n");
 #if defined(CONFIG_DNS_RESOLVER)
 	if (ret) {
 		ret = z_zsock_getaddrinfo_internal(host, service, hints, *res);
 	}
 #endif
+	printk("internal call finished\n");
 
 #if defined(ANY_RESOLVER)
 	if (ret) {

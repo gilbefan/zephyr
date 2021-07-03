@@ -143,6 +143,7 @@ int32_t Plaintext_Recv( NetworkContext_t * pNetworkContext,
     /* Make #select return immediately if getting the timeout failed. */
     if( getTimeoutStatus < 0 )
     {
+        //printk("trouble getting timeout status\n");
         recvTimeout.tv_sec = 0;
         recvTimeout.tv_usec = 0;
     }
@@ -179,9 +180,9 @@ int32_t Plaintext_Recv( NetworkContext_t * pNetworkContext,
     /* coverity[misra_c_2012_rule_10_8_violation] */
     ZSOCK_FD_SET( pPlaintextParams->socketDescriptor, &readfds );
 
+    //printk("recvTimeout.tv_sec is %ld\n recvTimeout.tv_usec is %ld", recvTimeout.tv_sec, recvTimeout.tv_usec);
     recvTimeout.tv_sec = ( ( ( int64_t ) 500 ) / ONE_SEC_TO_MS );
     recvTimeout.tv_usec = ( ONE_MS_TO_US * ( ( ( int64_t ) 500 ) % ONE_SEC_TO_MS ) );
-
     /* Check if there is data to read from the socket. */
     selectStatus = zsock_select( pPlaintextParams->socketDescriptor + 1,
                            &readfds,
@@ -255,6 +256,8 @@ int32_t Plaintext_Send( NetworkContext_t * pNetworkContext,
     /* Make #select return immediately if getting the timeout failed. */
     if( getTimeoutStatus < 0 )
     {
+        //printk("trouble getting timeout status\n");
+        //printk("THE ERRNO IS: %d\n", errno);
         sendTimeout.tv_sec = 0;
         sendTimeout.tv_usec = 0;
     }
@@ -290,9 +293,11 @@ int32_t Plaintext_Send( NetworkContext_t * pNetworkContext,
     /* coverity[misra_c_2012_rule_10_8_violation] */
     ZSOCK_FD_SET( pPlaintextParams->socketDescriptor, &writefds );
 
-    
+    //printk("sendTimeout.tv_sec is %ld\n sendTimeout.tv_usec is %ld", sendTimeout.tv_sec, sendTimeout.tv_usec);
     sendTimeout.tv_sec = ( ( ( int64_t ) 500 ) / ONE_SEC_TO_MS );
     sendTimeout.tv_usec = ( ONE_MS_TO_US * ( ( ( int64_t ) 500 ) % ONE_SEC_TO_MS ) );
+    //printk("sendTimeout.tv_sec is %ld\n sendTimeout.tv_usec is %ld", sendTimeout.tv_sec, sendTimeout.tv_usec);
+
     /* Check if data can be written to the socket. */
     selectStatus = zsock_select( pPlaintextParams->socketDescriptor + 1,
                            NULL,

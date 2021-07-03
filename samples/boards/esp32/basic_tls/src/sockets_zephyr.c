@@ -31,7 +31,9 @@
 //#include <unistd.h>
 //#include <sys/time.h>
 //#include <arpa/inet.h>
+
 #include <net/socket.h>
+#include <net/dns_resolve.h> //for testing if new dns function works
 
 #include "sockets_zephyr.h"
 
@@ -61,7 +63,7 @@
  */
 static SocketStatus_t resolveHostName( const char * pHostName,
                                        size_t hostNameLength,
-                                       struct addrinfo ** pListHead );
+                                       struct zsock_addrinfo ** pListHead );
 
 /**
  * @brief Traverse list of DNS records until a connection is established.
@@ -74,7 +76,7 @@ static SocketStatus_t resolveHostName( const char * pHostName,
  *
  * @return #SOCKETS_SUCCESS if successful; #SOCKETS_CONNECT_FAILURE on error.
  */
-static SocketStatus_t attemptConnection( struct addrinfo * pListHead,
+static SocketStatus_t attemptConnection( struct zsock_addrinfo * pListHead,
                                          const char * pHostName,
                                          size_t hostNameLength,
                                          uint16_t port,
@@ -104,13 +106,64 @@ static SocketStatus_t retrieveError( int32_t errorNumber );
 
 /*-----------------------------------------------------------*/
 
+void dns_result_cb(enum dns_resolve_status status,
+		   struct dns_addrinfo *info,
+		   void *user_data)
+{
+	char hr_addr[NET_IPV6_ADDR_LEN];
+	char *hr_family;
+	void *addr;
+
+	switch (status) {
+	case DNS_EAI_CANCELED:
+		printf("DNS query was canceled");
+		return;
+	case DNS_EAI_FAIL:
+		printf("DNS resolve failed");
+		return;
+	case DNS_EAI_NODATA:
+		printf("Cannot resolve address");
+		return;
+	case DNS_EAI_ALLDONE:
+		printf("DNS resolving finished");
+		return;
+	case DNS_EAI_INPROGRESS:
+		break;
+	default:
+		printf("DNS resolving error (%d)", status);
+		return;
+	}
+
+	if (!info) {
+		return;
+	}
+
+	if (info->ai_family == AF_INET) {
+		hr_family = "IPv4";
+		addr = &net_sin(&info->ai_addr)->sin_addr;
+	} else if (info->ai_family == AF_INET6) {
+		hr_family = "IPv6";
+		addr = &net_sin6(&info->ai_addr)->sin6_addr;
+	} else {
+		printf("Invalid IP address family %d", info->ai_family);
+		return;
+	}
+
+	printf("%s %s address: %s 0x%04x", 
+		(user_data ? (char *)user_data : "<null>"),
+		hr_family,
+		net_addr_ntop(info->ai_family, addr,
+					 hr_addr, sizeof(hr_addr)),
+		(( struct in_addr *)addr)->s_addr);
+}
+
 static SocketStatus_t resolveHostName( const char * pHostName,
                                        size_t hostNameLength,
-                                       struct addrinfo ** pListHead )
+                                       struct zsock_addrinfo ** pListHead )
 {
     SocketStatus_t returnStatus = SOCKETS_SUCCESS;
     int32_t dnsStatus = -1;
-    struct addrinfo hints;
+    struct zsock_addrinfo hints;
 
     assert( pHostName != NULL );
     assert( hostNameLength > 0 );
@@ -122,20 +175,26 @@ static SocketStatus_t resolveHostName( const char * pHostName,
     ( void ) memset( &hints, 0, sizeof( hints ) );
 
     /* Address family of either IPv4 or IPv6. */
-    hints.ai_family = AF_UNSPEC;
+    hints.ai_family = AF_UNSPEC; //Changed to AF_INET from AF_UNSPEC
     /* TCP Socket. */
     hints.ai_socktype = ( int32_t ) SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
 
+    printk("host name is: %s\n", pHostName);
+    printk("pListHead is: %p\n", pListHead);
+    printk("pListHead second pointer is: %p\n", *pListHead);
     /* Perform a DNS lookup on the given host name. */
     dnsStatus = zsock_getaddrinfo( pHostName, NULL, &hints, pListHead );
+    printk("getaddrinfo returns with status %d\n", dnsStatus);
+    printk("pListHead is: %p\n", pListHead);
+    printk("pListHead second pointer is: %p\n", *pListHead);
 
     if( dnsStatus != 0 )
     {
         LogError( ( "Failed to resolve DNS: Hostname=%.*s, ErrorCode=%d.\n",
                     ( int32_t ) hostNameLength,
                     pHostName,
-                    dnsStatus ) );
+                    errno ) ); //Changed: return errno instead of dnsStatus
         returnStatus = SOCKETS_DNS_FAILURE;
     }
 
@@ -216,14 +275,14 @@ static SocketStatus_t connectToAddress( struct sockaddr * pAddrInfo,
 }
 /*-----------------------------------------------------------*/
 
-static SocketStatus_t attemptConnection( struct addrinfo * pListHead,
+static SocketStatus_t attemptConnection( struct zsock_addrinfo * pListHead,
                                          const char * pHostName,
                                          size_t hostNameLength,
                                          uint16_t port,
                                          int32_t * pTcpSocket )
 {
     SocketStatus_t returnStatus = SOCKETS_CONNECT_FAILURE;
-    const struct addrinfo * pIndex = NULL;
+    const struct zsock_addrinfo * pIndex = NULL;
 
     assert( pListHead != NULL );
     assert( pHostName != NULL );
@@ -234,13 +293,14 @@ static SocketStatus_t attemptConnection( struct addrinfo * pListHead,
     ( void ) pHostName;
     ( void ) hostNameLength;
 
-    LogDebug( ( "Attempting to connect to: Host=%.*s.",
+    printk( "Attempting to connect to: Host=%.*s.",
                 ( int32_t ) hostNameLength,
-                pHostName ) );
+                pHostName );
 
     /* Attempt to connect to one of the retrieved DNS records. */
     for( pIndex = pListHead; pIndex != NULL; pIndex = pIndex->ai_next )
     {
+        printk("for loop once\n");
         *pTcpSocket = zsock_socket( pIndex->ai_family,
                               pIndex->ai_socktype,
                               pIndex->ai_protocol );
@@ -259,6 +319,7 @@ static SocketStatus_t attemptConnection( struct addrinfo * pListHead,
             break;
         }
     }
+    printk("exited for loop\n");
 
     if( returnStatus == SOCKETS_SUCCESS )
     {
@@ -283,7 +344,7 @@ static SocketStatus_t retrieveError( int32_t errorNumber )
 {
     SocketStatus_t returnStatus = SOCKETS_API_ERROR;
 
-    LogError( ( "A transport error occured: %s.", strerror( errorNumber ) ) );
+    LogError( ( "A transport error occured: %d.", errorNumber ) ); //removed strerror(errorNumber) and made it just decimal
 
     if( ( errorNumber == ENOMEM ) || ( errorNumber == ENOBUFS ) )
     {
@@ -308,8 +369,8 @@ SocketStatus_t Sockets_Connect( int32_t * pTcpSocket,
                                 uint32_t recvTimeoutMs )
 {
     SocketStatus_t returnStatus = SOCKETS_SUCCESS;
-    struct addrinfo * pListHead = NULL;
-    struct timeval transportTimeout;
+    struct zsock_addrinfo * pListHead = NULL;
+    struct zsock_timeval transportTimeout;
     int32_t setTimeoutStatus = -1;
 
     if( pServerInfo == NULL )
@@ -343,6 +404,7 @@ SocketStatus_t Sockets_Connect( int32_t * pTcpSocket,
                                         pServerInfo->hostNameLength,
                                         &pListHead );
     }
+    printk("resolveHostName finished with returnStatus: %d\n", returnStatus);
 
     if( returnStatus == SOCKETS_SUCCESS )
     {
@@ -352,12 +414,13 @@ SocketStatus_t Sockets_Connect( int32_t * pTcpSocket,
                                           pServerInfo->port,
                                           pTcpSocket );
     }
+    printk("attemptConnection finished with returnStatus: %d\n", returnStatus);
 
     /* Set the send timeout. */
-    if( returnStatus == SOCKETS_SUCCESS )
+    /*if( returnStatus == SOCKETS_SUCCESS )
     {
-        transportTimeout.tv_sec = ( ( ( int64_t ) sendTimeoutMs ) / ONE_SEC_TO_MS );
-        transportTimeout.tv_usec = ( ONE_MS_TO_US * ( ( ( int64_t ) sendTimeoutMs ) % ONE_SEC_TO_MS ) );
+        transportTimeout.tv_sec = ( ( ( int64_t ) 500 ) / ONE_SEC_TO_MS );//( ( ( int64_t ) sendTimeoutMs ) / ONE_SEC_TO_MS );
+        transportTimeout.tv_usec = ( ONE_MS_TO_US * ( ( ( int64_t ) 500 ) % ONE_SEC_TO_MS ) );//( ONE_MS_TO_US * ( ( ( int64_t ) sendTimeoutMs ) % ONE_SEC_TO_MS ) );
 
         setTimeoutStatus = zsock_setsockopt( *pTcpSocket,
                                        SOL_SOCKET,
@@ -370,13 +433,26 @@ SocketStatus_t Sockets_Connect( int32_t * pTcpSocket,
             LogError( ( "Setting socket send timeout failed." ) );
             returnStatus = retrieveError( errno );
         }
-    }
+        //debugging code:
+        /*printk("transportTimeout.tv_sec is %ld\n transportTimeout.tv_usec is %ld", transportTimeout.tv_sec, transportTimeout.tv_usec);
+
+        struct zsock_timeval sendTimeout;
+        socklen_t sendTimeoutLen;
+        int testret = zsock_getsockopt( *pTcpSocket,
+                          SOL_SOCKET,
+                          SO_SNDTIMEO,
+                          &sendTimeout,
+                          &sendTimeoutLen );
+
+        printk("IN SOCKETS: getsockopt return val is %d\n", testret);
+        printk("IN SOCKETS: sendTimeout.tv_sec is %ld\n sendTimeout.tv_usec is %ld", sendTimeout.tv_sec, sendTimeout.tv_usec);*/
+    //}
 
     /* Set the receive timeout. */
-    if( returnStatus == SOCKETS_SUCCESS )
+    /*if( returnStatus == SOCKETS_SUCCESS )
     {
-        transportTimeout.tv_sec = ( ( ( int64_t ) recvTimeoutMs ) / ONE_SEC_TO_MS );
-        transportTimeout.tv_usec = ( ONE_MS_TO_US * ( ( ( int64_t ) recvTimeoutMs ) % ONE_SEC_TO_MS ) );
+        transportTimeout.tv_sec = ( ( ( int64_t ) 500 ) / ONE_SEC_TO_MS );//( ( ( int64_t ) recvTimeoutMs ) / ONE_SEC_TO_MS );
+        transportTimeout.tv_usec = ( ONE_MS_TO_US * ( ( ( int64_t ) 500 ) % ONE_SEC_TO_MS ) );//( ONE_MS_TO_US * ( ( ( int64_t ) recvTimeoutMs ) % ONE_SEC_TO_MS ) );
 
         setTimeoutStatus = zsock_setsockopt( *pTcpSocket,
                                        SOL_SOCKET,
@@ -389,7 +465,7 @@ SocketStatus_t Sockets_Connect( int32_t * pTcpSocket,
             LogError( ( "Setting socket receive timeout failed." ) );
             returnStatus = retrieveError( errno );
         }
-    }
+    }*/
 
     return returnStatus;
 }
@@ -401,7 +477,7 @@ SocketStatus_t Sockets_Disconnect( int32_t tcpSocket )
 
     if( tcpSocket > 0 )
     {
-        ( void ) zsock_shutdown( tcpSocket, SHUT_RDWR );
+        ( void ) zsock_shutdown( tcpSocket, ZSOCK_SHUT_RDWR );
         ( void ) zsock_close( tcpSocket );
     }
     else

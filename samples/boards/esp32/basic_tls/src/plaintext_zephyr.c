@@ -26,10 +26,17 @@
 
 /* POSIX socket includes. */
 #include <errno.h>
-#include <net/socket.h>
 //#include <sys/select.h>
 
+#include <net/socket.h>
+
+
 #include "plaintext_zephyr.h"
+
+#define ONE_SEC_TO_MS    ( 1000 )
+
+#define ONE_MS_TO_US     ( 1000 )
+
 
 /*-----------------------------------------------------------*/
 
@@ -55,7 +62,7 @@ static void logTransportError( int32_t errorNumber )
     /* Remove unused parameter warning. */
     ( void ) errorNumber;
 
-    LogError( ( "A transport error occurred: %s.", strerror( errorNumber ) ) );
+    LogError( ( "A transport error occurred: %d.", errorNumber ) ); //removed strerror(errorNumber) and made it just decimal
 }
 /*-----------------------------------------------------------*/
 
@@ -136,6 +143,7 @@ int32_t Plaintext_Recv( NetworkContext_t * pNetworkContext,
     /* Make #select return immediately if getting the timeout failed. */
     if( getTimeoutStatus < 0 )
     {
+        //printk("trouble getting timeout status\n");
         recvTimeout.tv_sec = 0;
         recvTimeout.tv_usec = 0;
     }
@@ -172,6 +180,9 @@ int32_t Plaintext_Recv( NetworkContext_t * pNetworkContext,
     /* coverity[misra_c_2012_rule_10_8_violation] */
     ZSOCK_FD_SET( pPlaintextParams->socketDescriptor, &readfds );
 
+    //printk("recvTimeout.tv_sec is %ld\n recvTimeout.tv_usec is %ld", recvTimeout.tv_sec, recvTimeout.tv_usec);
+    recvTimeout.tv_sec = ( ( ( int64_t ) 500 ) / ONE_SEC_TO_MS );
+    recvTimeout.tv_usec = ( ONE_MS_TO_US * ( ( ( int64_t ) 500 ) % ONE_SEC_TO_MS ) );
     /* Check if there is data to read from the socket. */
     selectStatus = zsock_select( pPlaintextParams->socketDescriptor + 1,
                            &readfds,
@@ -201,7 +212,7 @@ int32_t Plaintext_Recv( NetworkContext_t * pNetworkContext,
     if( ( selectStatus > 0 ) && ( bytesReceived == 0 ) )
     {
         /* Peer has closed the connection. Treat as an error. */
-        bytesReceived = -1;
+        //bytesReceived = -1;
     }
     else if( bytesReceived < 0 )
     {
@@ -245,6 +256,8 @@ int32_t Plaintext_Send( NetworkContext_t * pNetworkContext,
     /* Make #select return immediately if getting the timeout failed. */
     if( getTimeoutStatus < 0 )
     {
+        //printk("trouble getting timeout status\n");
+        //printk("THE ERRNO IS: %d\n", errno);
         sendTimeout.tv_sec = 0;
         sendTimeout.tv_usec = 0;
     }
@@ -279,6 +292,12 @@ int32_t Plaintext_Send( NetworkContext_t * pNetworkContext,
     /* coverity[misra_c_2012_rule_13_4_violation] */
     /* coverity[misra_c_2012_rule_10_8_violation] */
     ZSOCK_FD_SET( pPlaintextParams->socketDescriptor, &writefds );
+
+    //printk("sendTimeout.tv_sec is %ld\n sendTimeout.tv_usec is %ld", sendTimeout.tv_sec, sendTimeout.tv_usec);
+    sendTimeout.tv_sec = ( ( ( int64_t ) 500 ) / ONE_SEC_TO_MS );
+    sendTimeout.tv_usec = ( ONE_MS_TO_US * ( ( ( int64_t ) 500 ) % ONE_SEC_TO_MS ) );
+    //printk("sendTimeout.tv_sec is %ld\n sendTimeout.tv_usec is %ld", sendTimeout.tv_sec, sendTimeout.tv_usec);
+
     /* Check if data can be written to the socket. */
     selectStatus = zsock_select( pPlaintextParams->socketDescriptor + 1,
                            NULL,

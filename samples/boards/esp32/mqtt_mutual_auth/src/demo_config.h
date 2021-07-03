@@ -57,7 +57,7 @@
  *
  * #define AWS_IOT_ENDPOINT               "...insert here..."
  */
-#define AWS_IOT_ENDPOINT       "a3rpgiyb2vwk8c-ats.iot.us-west-2.amazonaws.com"
+#define AWS_IOT_ENDPOINT       "alpha.mqtt.freertos.iot.aws.dev"
 
 /**
  * @brief AWS IoT MQTT broker port number.
@@ -68,7 +68,7 @@
  * name. When using port 8883, ALPN is not required.
  */
 #ifndef AWS_MQTT_PORT
-    #define AWS_MQTT_PORT    ( 8883 )
+    #define AWS_MQTT_PORT    ( 1883 )
 #endif
 
 /**

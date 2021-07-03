@@ -180,8 +180,13 @@ static SocketStatus_t resolveHostName( const char * pHostName,
     hints.ai_socktype = ( int32_t ) SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
 
+    printk("about to getaddrinfo\n");
     /* Perform a DNS lookup on the given host name. */
+    printk("host name is: %s\n", pHostName);
+    printk("pListHead is: %p\n", pListHead);
+    printk("pListHead second pointer is: %p\n", *pListHead);
     dnsStatus = zsock_getaddrinfo( pHostName, NULL, &hints, pListHead );
+    printk("addrinfo gotten");
 
     if( dnsStatus != 0 )
     {
@@ -249,12 +254,14 @@ static SocketStatus_t connectToAddress( struct sockaddr * pAddrInfo,
                             ( socklen_t ) sizeof( resolvedIpAddr ) );
     }
 
-    LogDebug( ( "Attempting to connect to server using the resolved IP address:"
+    printk("Attempting to connect to server using the resolved IP address:"
                 " IP address=%s.",
-                resolvedIpAddr ) );
+                resolvedIpAddr );
 
+    printk("where is debug rip\n");
     /* Attempt to connect. */
     connectStatus = zsock_connect( tcpSocket, pAddrInfo, addrInfoLength );
+    printk("zsock_connect finished");
 
     if( connectStatus == -1 )
     {
@@ -358,6 +365,7 @@ SocketStatus_t Sockets_Connect( int32_t * pTcpSocket,
                                 uint32_t sendTimeoutMs,
                                 uint32_t recvTimeoutMs )
 {
+    //printk("sockets_connect called \n");
     SocketStatus_t returnStatus = SOCKETS_SUCCESS;
     struct zsock_addrinfo * pListHead = NULL;
     struct zsock_timeval transportTimeout;
@@ -394,6 +402,7 @@ SocketStatus_t Sockets_Connect( int32_t * pTcpSocket,
                                         pServerInfo->hostNameLength,
                                         &pListHead );
     }
+    printk("host name resolved\n");
 
     if( returnStatus == SOCKETS_SUCCESS )
     {
@@ -403,12 +412,13 @@ SocketStatus_t Sockets_Connect( int32_t * pTcpSocket,
                                           pServerInfo->port,
                                           pTcpSocket );
     }
+    printk("connection attempt finished\n");
 
     /* Set the send timeout. */
-    /*\if( returnStatus == SOCKETS_SUCCESS )
+    /*if( returnStatus == SOCKETS_SUCCESS )
     {
-        transportTimeout.tv_sec = ( ( ( int64_t ) sendTimeoutMs ) / ONE_SEC_TO_MS );
-        transportTimeout.tv_usec = ( ONE_MS_TO_US * ( ( ( int64_t ) sendTimeoutMs ) % ONE_SEC_TO_MS ) );
+        transportTimeout.tv_sec = 1;//( ( ( int64_t ) sendTimeoutMs ) / ONE_SEC_TO_MS );
+        transportTimeout.tv_usec = 0;//( ONE_MS_TO_US * ( ( ( int64_t ) sendTimeoutMs ) % ONE_SEC_TO_MS ) );
 
         setTimeoutStatus = zsock_setsockopt( *pTcpSocket,
                                        SOL_SOCKET,
@@ -426,8 +436,8 @@ SocketStatus_t Sockets_Connect( int32_t * pTcpSocket,
     /* Set the receive timeout. */
     /*if( returnStatus == SOCKETS_SUCCESS )
     {
-        transportTimeout.tv_sec = ( ( ( int64_t ) recvTimeoutMs ) / ONE_SEC_TO_MS );
-        transportTimeout.tv_usec = ( ONE_MS_TO_US * ( ( ( int64_t ) recvTimeoutMs ) % ONE_SEC_TO_MS ) );
+        transportTimeout.tv_sec = 1;//( ( ( int64_t ) recvTimeoutMs ) / ONE_SEC_TO_MS );
+        transportTimeout.tv_usec = 0;//( ONE_MS_TO_US * ( ( ( int64_t ) recvTimeoutMs ) % ONE_SEC_TO_MS ) );
 
         setTimeoutStatus = zsock_setsockopt( *pTcpSocket,
                                        SOL_SOCKET,

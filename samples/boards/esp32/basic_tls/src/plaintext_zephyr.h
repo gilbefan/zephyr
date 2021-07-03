@@ -20,8 +20,8 @@
  * CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-#ifndef PLAINTEXT_POSIX_H_
-#define PLAINTEXT_POSIX_H_
+#ifndef PLAINTEXT_ZEPHYR_H_
+#define PLAINTEXT_ZEPHYR_H_
 
 /**************************************************/
 /******* DO NOT CHANGE the following order ********/

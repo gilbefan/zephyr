@@ -175,11 +175,14 @@ static SocketStatus_t resolveHostName( const char * pHostName,
     ( void ) memset( &hints, 0, sizeof( hints ) );
 
     /* Address family of either IPv4 or IPv6. */
-    hints.ai_family = AF_INET; //Changed to AF_INET from AF_UNSPEC
+    hints.ai_family = AF_UNSPEC; //Changed to AF_INET from AF_UNSPEC
     /* TCP Socket. */
     hints.ai_socktype = ( int32_t ) SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
 
+    printk("host name is: %s\n", pHostName);
+    printk("pListHead is: %p\n", pListHead);
+    printk("pListHead second pointer is: %p\n", *pListHead);
     /* Perform a DNS lookup on the given host name. */
     dnsStatus = zsock_getaddrinfo( pHostName, NULL, &hints, pListHead );
 
@@ -407,10 +410,10 @@ SocketStatus_t Sockets_Connect( int32_t * pTcpSocket,
     }
 
     /* Set the send timeout. */
-    /*if( returnStatus == SOCKETS_SUCCESS )
+    if( returnStatus == SOCKETS_SUCCESS )
     {
-        transportTimeout.tv_sec = ( ( ( int64_t ) sendTimeoutMs ) / ONE_SEC_TO_MS );
-        transportTimeout.tv_usec = ( ONE_MS_TO_US * ( ( ( int64_t ) sendTimeoutMs ) % ONE_SEC_TO_MS ) );
+        transportTimeout.tv_sec = ( ( ( int64_t ) 500 ) / ONE_SEC_TO_MS );//( ( ( int64_t ) sendTimeoutMs ) / ONE_SEC_TO_MS );
+        transportTimeout.tv_usec = ( ONE_MS_TO_US * ( ( ( int64_t ) 500 ) % ONE_SEC_TO_MS ) );//( ONE_MS_TO_US * ( ( ( int64_t ) sendTimeoutMs ) % ONE_SEC_TO_MS ) );
 
         setTimeoutStatus = zsock_setsockopt( *pTcpSocket,
                                        SOL_SOCKET,
@@ -423,13 +426,26 @@ SocketStatus_t Sockets_Connect( int32_t * pTcpSocket,
             LogError( ( "Setting socket send timeout failed." ) );
             returnStatus = retrieveError( errno );
         }
-    }*/
+        //debugging code:
+        /*printk("transportTimeout.tv_sec is %ld\n transportTimeout.tv_usec is %ld", transportTimeout.tv_sec, transportTimeout.tv_usec);
+
+        struct zsock_timeval sendTimeout;
+        socklen_t sendTimeoutLen;
+        int testret = zsock_getsockopt( *pTcpSocket,
+                          SOL_SOCKET,
+                          SO_SNDTIMEO,
+                          &sendTimeout,
+                          &sendTimeoutLen );
+
+        printk("IN SOCKETS: getsockopt return val is %d\n", testret);
+        printk("IN SOCKETS: sendTimeout.tv_sec is %ld\n sendTimeout.tv_usec is %ld", sendTimeout.tv_sec, sendTimeout.tv_usec);*/
+    }
 
     /* Set the receive timeout. */
-    /*if( returnStatus == SOCKETS_SUCCESS )
+    if( returnStatus == SOCKETS_SUCCESS )
     {
-        transportTimeout.tv_sec = ( ( ( int64_t ) recvTimeoutMs ) / ONE_SEC_TO_MS );
-        transportTimeout.tv_usec = ( ONE_MS_TO_US * ( ( ( int64_t ) recvTimeoutMs ) % ONE_SEC_TO_MS ) );
+        transportTimeout.tv_sec = ( ( ( int64_t ) 500 ) / ONE_SEC_TO_MS );//( ( ( int64_t ) recvTimeoutMs ) / ONE_SEC_TO_MS );
+        transportTimeout.tv_usec = ( ONE_MS_TO_US * ( ( ( int64_t ) 500 ) % ONE_SEC_TO_MS ) );//( ONE_MS_TO_US * ( ( ( int64_t ) recvTimeoutMs ) % ONE_SEC_TO_MS ) );
 
         setTimeoutStatus = zsock_setsockopt( *pTcpSocket,
                                        SOL_SOCKET,
@@ -442,7 +458,7 @@ SocketStatus_t Sockets_Connect( int32_t * pTcpSocket,
             LogError( ( "Setting socket receive timeout failed." ) );
             returnStatus = retrieveError( errno );
         }
-    }*/
+    }
 
     return returnStatus;
 }

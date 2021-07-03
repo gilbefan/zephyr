@@ -67,6 +67,8 @@ LOG_MODULE_REGISTER(esp32_wifi_sta, LOG_LEVEL_DBG);
 static struct net_mgmt_event_callback dhcp_cb;
 static struct k_work_delayable tcp_timer;
 
+bool fakemutex = true;
+
 /**
  * These configuration settings are required to run the plaintext demo.
  * Throw compilation error if the below configs are not defined.
@@ -1036,7 +1038,7 @@ int mqtt_start()
     MQTTContext_t mqttContext = { 0 };
     NetworkContext_t networkContext = { 0 };
     PlaintextParams_t plaintextParams = { 0 };
-    struct timespec tp;
+    //struct timespec tp;
 
     /* Set the pParams member of the network context with desired transport. */
     networkContext.pParams = &plaintextParams;
@@ -1046,7 +1048,7 @@ int mqtt_start()
      * with broker. */
 
     /* Get current time to seed pseudo random number generator. */
-    ( void ) clock_gettime( CLOCK_REALTIME, &tp );
+    //( void ) clock_gettime( CLOCK_REALTIME, &tp );
     /* Seed pseudo random number generator with nanoseconds. */
     //srand( tp.tv_nsec ); CHANGED, NO SEED BASED ON TIME
 
@@ -1115,8 +1117,9 @@ static void handler_cb(struct net_mgmt_event_callback *cb,
 						&iface->config.ip.ipv4->gw,
 						buf, sizeof(buf))));
     
-    k_work_init_delayable(&tcp_timer, mqtt_start);
-	k_work_reschedule(&tcp_timer, K_NO_WAIT);
+    fakemutex = false;
+    //k_work_init_delayable(&tcp_timer, mqtt_start);
+	//k_work_reschedule(&tcp_timer, K_NO_WAIT);
 }
 
 void main()
@@ -1153,4 +1156,10 @@ void main()
 			LOG_ERR("connection failed");
 		}
 	}
+
+    while(fakemutex) {
+        sleep(1);
+    }
+
+    mqtt_start();
 }   

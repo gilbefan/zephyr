@@ -3,9 +3,7 @@
 cmake_minimum_required(VERSION 3.13.1)
 
 find_package(Zephyr HINTS $ENV{ZEPHYR_BASE})
-
-project(mqtt)
-set( DEMO_NAME "main" )
+project(mqtt_mutual_auth)
 
 FILE(GLOB app_sources src/*.c)
 target_sources(app PRIVATE ${app_sources})
@@ -19,33 +17,17 @@ include( ${CMAKE_SOURCE_DIR}/backoffAlgorithm/backoffAlgorithmFilePaths.cmake )
 # Include logging sources. Does this work???
 include( ${CMAKE_SOURCE_DIR}/logging-stack/logging.cmake )
 
-#Include platform. Does this work??
-include( ${CMAKE_SOURCE_DIR}/platform_zephyr/zephyrFilePaths.cmake )
-
-# Demo target.
-add_executable(
-    ${DEMO_NAME}
-        "src/${DEMO_NAME}.c"
-        ${SOCKETS_SOURCES}
-        ${PLAINTEXT_TRANSPORT_SOURCES}
+target_sources(app
+    PRIVATE 
+        #${SOCKETS_SOURCES}
         ${MQTT_SOURCES}
         ${MQTT_SERIALIZER_SOURCES}
         ${BACKOFF_ALGORITHM_SOURCES}
 )
 
-target_link_libraries(
-    ${DEMO_NAME}
-    PRIVATE
-        clock_posix
-        plaintext_zephyr
-)
-
-target_include_directories(
-    ${DEMO_NAME}
+target_include_directories(app
     PUBLIC
-        "include"
-        ${COMMON_TRANSPORT_INCLUDE_PUBLIC_DIRS} 
-        ${MQTT_INCLUDE_PUBLIC_DIRS}
+    ${MQTT_INCLUDE_PUBLIC_DIRS}
         ${BACKOFF_ALGORITHM_INCLUDE_PUBLIC_DIRS}
         ${CMAKE_CURRENT_LIST_DIR}
         ${LOGGING_INCLUDE_DIRS}

@@ -79,7 +79,7 @@
  * `printf` from the standard C library is the POSIX platform implementation used
  * for logging functionality.
  */
-    #define SdkLog( string )    printk string
+    #define SdkLog( string )    printf string
 #else
     #define SdkLog( string )
 #endif
